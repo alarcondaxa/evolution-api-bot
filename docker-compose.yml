@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  evolution-api:
+    image: atendai/evolution-api:v2.2.3
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_URL=${SERVER_URL}
+      - AUTHENTICATION_API_KEY=${AUTHENTICATION_API_KEY}
+      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - DEL_INSTANCE=false
+      - DATABASE_ENABLED=false
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=${DATABASE_CONNECTION_URI:-}
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - DATABASE_SAVE_DATA_INSTANCE=false
+      - DATABASE_SAVE_DATA_NEW_MESSAGE=false
+      - DATABASE_SAVE_MESSAGE_UPDATE=false
+      - DATABASE_SAVE_DATA_CONTACTS=false
+      - DATABASE_SAVE_DATA_CHATS=false
+      - DATABASE_SAVE_DATA_LABELS=false
+      - DATABASE_SAVE_DATA_HISTORIC=false
+      - CACHE_REDIS_ENABLED=false
+      - CACHE_REDIS_URI=${CACHE_REDIS_URI:-redis://redis:6379}
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_SAVE_INSTANCES=false
+      - CACHE_LOCAL_ENABLED=true
+      - RABBITMQ_ENABLED=false
+      - WEBSOCKET_ENABLED=false
+      - WA_BUSINESS_TOKEN_WEBHOOK=evolution
+      - WA_BUSINESS_URL=https://graph.facebook.com
+      - WA_BUSINESS_VERSION=v20.0
+      - WA_BUSINESS_LANGUAGE=pt_BR
+      - WEBHOOK_GLOBAL_ENABLED=false
+      - WEBHOOK_GLOBAL_URL=${WEBHOOK_URL:-}
+      - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=false
+      - QRCODE_LIMIT=30
+      - QRCODE_COLOR=#198754
+      - LANGUAGE=pt-BR
+      - CONFIG_SESSION_PHONE_CLIENT=Evolution API
+      - CONFIG_SESSION_PHONE_NAME=Chrome
+      - LOG_LEVEL=ERROR
+      - LOG_COLOR=true
+      - LOG_BAILEYS=error
+      - STORE_MESSAGES=true
+      - STORE_MESSAGE_UP=true
+      - STORE_CONTACTS=true
+      - STORE_CHATS=true
+      - CLEAN_STORE_CLEANING_INTERVAL=7200
+      - CLEAN_STORE_MESSAGES=true
+      - CLEAN_STORE_MESSAGE_UP=true
+      - CLEAN_STORE_CONTACTS=true
+      - CLEAN_STORE_CHATS=true
+    volumes:
+      - evolution_instances:/evolution/instances
+      - evolution_store:/evolution/store
+
+volumes:
+  evolution_instances:
+  evolution_store:
