@@ -1,19 +1,56 @@
-# Usa a imagem oficial da Evolution API v2 (atendai/evolution-api)
-# O entrypoint padrão da imagem já inicia o servidor corretamente
-FROM atendai/evolution-api:v2.2.3
+# ============================================================
+# Evolution API – Build completo a partir do código fonte
+# Baseado no Dockerfile oficial do repositório EvolutionAPI
+# ============================================================
 
-# Variáveis de ambiente padrão (serão sobrescritas pelas variáveis do Railway)
-ENV SERVER_URL=http://localhost:8080
-ENV AUTHENTICATION_API_KEY=changeme
-ENV CACHE_REDIS_ENABLED=false
-ENV CACHE_LOCAL_ENABLED=true
-ENV DEL_INSTANCE=false
-ENV LANGUAGE=pt-BR
-ENV CONFIG_SESSION_PHONE_CLIENT=EquatorialBot
-ENV CONFIG_SESSION_PHONE_NAME=Chrome
-ENV QRCODE_LIMIT=30
-ENV LOG_LEVEL=ERROR
-ENV LOG_COLOR=true
-ENV LOG_BAILEYS=error
+FROM node:24-alpine AS builder
+
+RUN apk update && \
+    apk add --no-cache git ffmpeg wget curl bash openssl
+
+WORKDIR /evolution
+
+# Clonar o repositório oficial da Evolution API v2
+RUN git clone --depth=1 --branch main https://github.com/EvolutionAPI/evolution-api.git .
+
+# Instalar dependências
+RUN npm ci --silent
+
+# Copiar .env de exemplo e tornar scripts executáveis
+RUN cp .env.example .env && \
+    chmod +x ./Docker/scripts/*
+
+# Gerar Prisma client
+RUN ./Docker/scripts/generate_database.sh
+
+# Build TypeScript
+RUN npm run build
+
+# ============================================================
+# Imagem final – apenas o necessário para rodar
+# ============================================================
+FROM node:24-alpine AS final
+
+RUN apk update && \
+    apk add --no-cache tzdata ffmpeg bash openssl
+
+ENV TZ=America/Sao_Paulo
+ENV DOCKER_ENV=true
+
+WORKDIR /evolution
+
+COPY --from=builder /evolution/package.json ./package.json
+COPY --from=builder /evolution/package-lock.json ./package-lock.json
+COPY --from=builder /evolution/node_modules ./node_modules
+COPY --from=builder /evolution/dist ./dist
+COPY --from=builder /evolution/prisma ./prisma
+COPY --from=builder /evolution/manager ./manager
+COPY --from=builder /evolution/public ./public
+COPY --from=builder /evolution/.env ./.env
+COPY --from=builder /evolution/Docker ./Docker
+COPY --from=builder /evolution/runWithProvider.js ./runWithProvider.js
+COPY --from=builder /evolution/tsup.config.ts ./tsup.config.ts
 
 EXPOSE 8080
+
+ENTRYPOINT ["/bin/bash", "-c", ". ./Docker/scripts/deploy_database.sh && npm run start:prod"]
